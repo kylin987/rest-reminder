@@ -1,0 +1,64 @@
+name: 打包发布
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 版本号，例如 1.0.0
+        required: true
+        default: "1.0.0"
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 选择版本号
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF_NAME#v}"
+          fi
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: 测试
+        run: ./scripts/test.sh
+
+      - name: 打包
+        run: |
+          ./scripts/build.sh --share
+          cp "dist/休息提醒.zip" dist/rest-reminder-macos.zip
+          lipo -info "dist/休息提醒.app/Contents/MacOS/RestReminder"
+
+      - name: 发布
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          printf '%s\n' \
+            "macOS 14 或更新版本，Apple 芯片和 Intel 芯片都可以。" \
+            "" \
+            "下载 rest-reminder-macos.zip，解压后把「休息提醒.app」拖进「应用程序」。" \
+            "第一次打开如果被系统拦住，按压缩包里的「打开说明.txt」处理。" \
+            > release-notes.md
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/rest-reminder-macos.zip --clobber
+            gh release edit "$TAG" --title "休息提醒 $VERSION" --notes-file release-notes.md --latest
+          else
+            gh release create "$TAG" dist/rest-reminder-macos.zip \
+              --title "休息提醒 $VERSION" \
+              --notes-file release-notes.md \
+              --latest
+          fi
