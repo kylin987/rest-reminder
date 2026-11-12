@@ -13,9 +13,16 @@
 
 安装后的应用在 `~/Applications/休息提醒.app`。菜单栏会出现杯子图标和累计时间。
 
-发给别人时，打开仓库的 Actions，选「打包发布」，填版本号后运行。完成后到 Releases 下载 `rest-reminder-macos.zip`。对方需要 macOS 14 或更新版本。没有开发者证书，第一次打开要按压缩包里的说明去掉隔离标记。
+发给别人时推送一个版本标签，GitHub 会自动打包并发布：
 
-本地也可以自己打包：`./scripts/build.sh --share`，产物是 `dist/休息提醒.zip`。
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+完成后到 Releases 下载 `rest-reminder-macos.dmg`。对方需要 macOS 14 或更新版本。没有开发者证书，第一次打开要按镜像里的说明去掉隔离标记。
+
+本地也可以自己打包：`./scripts/build.sh --share`，产物是 `dist/休息提醒.dmg`。
 
 菜单里可以立即休息、重新计时、暂停提醒、改时长，以及登录时打开。
 

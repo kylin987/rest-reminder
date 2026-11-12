@@ -60,28 +60,26 @@ codesign --force --sign - "$APP" >/dev/null
 
 if [[ "$MODE" == "--share" ]]; then
   STAGE="$(mktemp -d /tmp/rest-share.XXXXXX)"
-  mkdir -p "$STAGE/休息提醒"
-  cp -R "$APP" "$STAGE/休息提醒/"
-  cat > "$STAGE/休息提醒/打开说明.txt" << 'EOF'
+  cp -R "$APP" "$STAGE/"
+  ln -s /Applications "$STAGE/Applications"
+  cat > "$STAGE/打开说明.txt" << 'EOF'
 休息提醒
 
 需要 macOS 14 或更新版本，Apple 芯片和 Intel 芯片都可以。
 
-1. 把「休息提醒.app」拖进「应用程序」文件夹，再双击打开。
+1. 把「休息提醒」拖进「应用程序」，再打开。
 2. 如果系统提示「已损坏」或「无法验证开发者」：
    打开「终端」，输入下面这一行（末尾有一个空格），把应用拖进终端，然后回车：
    xattr -cr 
-   完成后再次双击打开。
+   完成后再次打开。
    也可以到「系统设置 → 隐私与安全性」里点「仍要打开」。
 3. 菜单栏会出现杯子图标。点它就能改时长、暂停或退出。
-
-请发送这个压缩包，不要直接发送 .app。聊天软件有时会把应用程序包拆坏。
 EOF
-  ZIP="$ROOT/dist/休息提醒.zip"
-  rm -f "$ZIP"
-  ditto -c -k --keepParent "$STAGE/休息提醒" "$ZIP"
+  DMG="$ROOT/dist/休息提醒.dmg"
+  rm -f "$DMG"
+  hdiutil create -volname "休息提醒" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null
   rm -rf "$STAGE"
-  echo "share $ZIP"
+  echo "share $DMG"
 elif [[ "$MODE" == "--install" ]]; then
   mkdir -p "$HOME/Applications"
   DEST="$HOME/Applications/休息提醒.app"
