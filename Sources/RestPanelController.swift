@@ -2,7 +2,7 @@ import AppKit
 
 enum RestPanelContent: Equatable {
     case prompt(used: TimeInterval, breakLength: TimeInterval, snoozeLength: TimeInterval)
-    case resting(remaining: TimeInterval)
+    case resting(remaining: TimeInterval, snoozeLength: TimeInterval)
     case finished
 }
 
@@ -151,14 +151,16 @@ final class RestPanelController: NSObject {
             snoozeButton.setLabel("稍后 \(max(1, Int(snoozeLength / 60))) 分钟")
             skipButton.setLabel("跳过这次")
             secondaryRow.isHidden = false
-        case .resting(let remaining):
+        case .resting(let remaining, let snoozeLength):
             mode = .resting
             setEyebrow("休息中")
             titleLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 56, weight: .light)
             titleLabel.stringValue = Format.clock(remaining)
             detailLabel.stringValue = "看看远处，或者离开椅子走一走。"
             primaryButton.setLabel("提前结束")
-            secondaryRow.isHidden = true
+            snoozeButton.setLabel("稍后 \(max(1, Int(snoozeLength / 60))) 分钟")
+            skipButton.setLabel("跳过这次")
+            secondaryRow.isHidden = false
         case .finished:
             mode = .finished
             setEyebrow("休息结束")

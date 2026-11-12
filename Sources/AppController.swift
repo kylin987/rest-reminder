@@ -64,7 +64,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         )
         apply(result, now: now, idle: idle)
         if case .due = snapshot.phase, !snapshot.remindersPaused, overlay == nil {
-            showPrompt(playSound: !launch.isEphemeral)
+            beginCountdown(playSound: !launch.isEphemeral)
         } else if case .resting = snapshot.phase, overlay == nil {
             showResting()
         }
@@ -155,7 +155,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func apply(_ result: RestTickResult, now: Date, idle: TimeInterval) {
         snapshot = result.snapshot
         if result.becameDue {
-            showPrompt(playSound: !launch.isEphemeral)
+            beginCountdown(playSound: !launch.isEphemeral)
         } else if result.breakFinished {
             overlay = .finished(until: now.addingTimeInterval(4))
             panel.present(.finished)
@@ -168,9 +168,12 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         } else if panel.isVisible {
             switch snapshot.phase {
             case .due:
-                panel.present(promptContent())
+                beginCountdown(playSound: false)
             case .resting(let until):
-                panel.present(.resting(remaining: until.timeIntervalSince(now)))
+                panel.present(.resting(
+                    remaining: until.timeIntervalSince(now),
+                    snoozeLength: config.snoozeSeconds
+                ))
             default:
                 break
             }
@@ -190,22 +193,24 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
     }
 
-    private func showPrompt(playSound: Bool) {
-        overlay = .prompt
+    private func beginCountdown(playSound: Bool) {
+        let now = Date()
+        snapshot = SessionEngine.handle(.startBreak, snapshot: snapshot, now: now, config: config)
         if playSound {
             NSSound(named: "Glass")?.play()
         }
-        panel.present(promptContent())
+        showResting()
+        refreshStatus(now: now, idle: IdleSensor.secondsSinceLastInput())
+        persist(force: true)
     }
 
     private func showResting() {
         guard case .resting(let until) = snapshot.phase else { return }
         overlay = .resting
-        panel.present(.resting(remaining: until.timeIntervalSince(Date())))
-    }
-
-    private func promptContent() -> RestPanelContent {
-        .prompt(used: snapshot.activeSeconds, breakLength: config.breakSeconds, snoozeLength: config.snoozeSeconds)
+        panel.present(.resting(
+            remaining: until.timeIntervalSince(Date()),
+            snoozeLength: config.snoozeSeconds
+        ))
     }
 
     private func startBreak() {
@@ -280,9 +285,8 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func showDemo() {
         switch launch.demo {
         case .due:
-            snapshot.phase = .due
             snapshot.activeSeconds = config.workSeconds
-            showPrompt(playSound: false)
+            beginCountdown(playSound: false)
         case .rest:
             snapshot.phase = .resting(until: Date().addingTimeInterval(125))
             showResting()
@@ -398,18 +402,11 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func restNow() {
-        switch snapshot.phase {
-        case .resting:
+        if case .resting = snapshot.phase {
             showResting()
-        case .due:
-            showPrompt(playSound: false)
-        default:
-            let now = Date()
-            snapshot = SessionEngine.handle(.promptNow, snapshot: snapshot, now: now, config: config)
-            showPrompt(playSound: !launch.isEphemeral)
-            refreshStatus(now: now, idle: IdleSensor.secondsSinceLastInput())
-            persist(force: true)
+            return
         }
+        beginCountdown(playSound: !launch.isEphemeral)
     }
 
     @objc private func resetSession() {
@@ -421,7 +418,7 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if snapshot.remindersPaused {
             snapshot = SessionEngine.handle(.resumeReminders, snapshot: snapshot, now: now, config: config)
             if case .due = snapshot.phase {
-                showPrompt(playSound: false)
+                beginCountdown(playSound: false)
             } else if case .resting = snapshot.phase {
                 showResting()
             }

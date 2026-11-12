@@ -47,7 +47,7 @@ final class SettingsWindowController: NSWindowController {
         let rowHeight: CGFloat = 32
         let rows: [(String, NSTextField, NSStepper, String)] = [
             ("连续使用多久后提醒", workValue, workStepper, "键鼠累计活动达到这个时长就提醒。"),
-            ("休息时长", breakValue, breakStepper, "点「开始休息」后的倒计时。"),
+            ("休息时长", breakValue, breakStepper, "休息窗口出现后直接开始的倒计时。"),
             ("稍后提醒", snoozeValue, snoozeStepper, "先关掉窗口，过这段时间再提醒。"),
             ("多久没操作就暂停", idleValue, idleStepper, "连续这么久没有键鼠操作，就先停下累计。"),
             ("离开多久就重新计时", resetValue, resetStepper, "离开超过这段时间，视为已经休息过，从 0 开始。"),
